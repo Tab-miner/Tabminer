@@ -11,8 +11,8 @@ public class RectanglePainterPanel extends JPanel {
         int width = Math.abs(start.x - end.x);
         int height = Math.abs(start.y - end.y);
         _rectangle.setRect(x, y, width, height);
-        setBounds(_rectangle);
         _hasRect = true;
+        repaint();
     }
 
     @Override
@@ -22,8 +22,8 @@ public class RectanglePainterPanel extends JPanel {
             Graphics2D g2d = (Graphics2D) g;
             // Draw existing rectangles
             g2d.setColor(Color.RED);
+            g2d.setStroke(new BasicStroke(4));
             g2d.draw(_rectangle);
-            System.out.println("update - drawn");
         }
         g.dispose();
     }

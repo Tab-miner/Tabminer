@@ -17,188 +17,191 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.rendering.PDFRenderer;
 
 public class DocPreview {
-    private static JFrame frame;
-    private static RectanglePainterPanel rectPainter;
-    private static JPanel pdfPanel;
-    private static JLabel pdfLabel;
-    private static PDFRenderer pdfRenderer;
-    private static int currentPage = 0;
-    private static PDDocument _document;
-    private Point startPoint = null;
-    private Point endPoint = null;
+	private static JFrame frame;
+	private static RectanglePainterPanel rectPainter;
+	private static JPanel pdfPanel;
+	private static JLabel pdfLabel;
+	private static PDFRenderer pdfRenderer;
+	private static JLayeredPane layered;
+	private static int currentPage = 0;
+	private static PDDocument _document;
+	private Point startPoint = null;
+	private Point endPoint = null;
 
-    public static void main(String[] args) {
-        frame = new JFrame("PDF Previewer");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+	public static void main(String[] args) {
+		frame = new JFrame("PDF Previewer");
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        File file = new File("C:/Users/mufid/hobby/OCR/Discover-AccountActivity-20230726.pdf");
+		File file = new File("Discover.pdf");
 
-        try {
-            _document = PDDocument.load(file);
-            pdfRenderer = new PDFRenderer(_document);
+		try {
+			_document = PDDocument.load(file);
+			pdfRenderer = new PDFRenderer(_document);
+			PDPage firstPage = _document.getPage(0);
+			int pageWidth = (int) firstPage.getMediaBox().getWidth();
+			int pageHeight = (int) firstPage.getMediaBox().getHeight();
 
-            PDPage firstPage = _document.getPage(0);
-            int pageWidth = (int) firstPage.getMediaBox().getWidth();
-            int pageHeight = (int) firstPage.getMediaBox().getHeight();
+			pdfPanel = new JPanel(new BorderLayout());
 
-            pdfPanel = new JPanel(new BorderLayout());
+			pdfLabel = new JLabel();
+			pdfPanel.add(pdfLabel, BorderLayout.CENTER);
 
-            pdfLabel = new JLabel();
-            pdfPanel.add(pdfLabel, BorderLayout.CENTER);
+			JScrollPane scrollPane = new JScrollPane(pdfPanel);
+			scrollPane.setPreferredSize(new Dimension(pageWidth, pageHeight));
+			frame.add(scrollPane);
 
-            JScrollPane scrollPane = new JScrollPane(pdfPanel);
-            scrollPane.setPreferredSize(new Dimension(pageWidth, pageHeight));
-            frame.add(scrollPane);
+			// Create navigation buttons
+			JButton prevButton = new JButton("Previous");
+			JButton nextButton = new JButton("Next");
 
-            // Create navigation buttons
-            JButton prevButton = new JButton("Previous");
-            JButton nextButton = new JButton("Next");
+			// Add action listeners to the navigation buttons
+			prevButton.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					if (currentPage > 0) {
+						currentPage--;
+						renderAndDisplayPage(currentPage);
+					}
+				}
+			});
 
-            // Add action listeners to the navigation buttons
-            prevButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    if (currentPage > 0) {
-                        currentPage--;
-                        renderAndDisplayPage(currentPage);
-                    }
-                }
-            });
+			nextButton.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					if (currentPage < _document.getNumberOfPages() - 1) {
+						currentPage++;
+						renderAndDisplayPage(currentPage);
+					}
+				}
+			});
 
-            nextButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    if (currentPage < _document.getNumberOfPages() - 1) {
-                        currentPage++;
-                        renderAndDisplayPage(currentPage);
-                    }
-                }
-            });
+			// Create an instance of the DocPreview class
+			DocPreview docPreview = new DocPreview();
 
-            // Create an instance of the DocPreview class
-        DocPreview docPreview = new DocPreview();
+			// Add a mouse listener to the pdfPanel
+			MouseAdapter adapter = new MouseAdapter() {
+				@Override
+				public void mousePressed(MouseEvent e) {
+					docPreview.startPoint = e.getPoint();
+					docPreview.endPoint = null;
+				}
+				@Override
+				public void mouseDragged(MouseEvent e) {
+					docPreview.endPoint = e.getPoint();
+					rectPainter.createRectangle(docPreview.startPoint, docPreview.endPoint);
+			    }
+				@Override
+				public void mouseReleased(MouseEvent e) {
+					docPreview.endPoint = e.getPoint();
+					System.out.println("Mouse released at X: " + e.getX() + ", Y: " + e.getY());
+					rectPainter.createRectangle(docPreview.startPoint, docPreview.endPoint);
+					if (docPreview.startPoint != null && docPreview.endPoint != null) {
+						sendCoordinatesAndFileNameToPython(docPreview.startPoint, docPreview.endPoint, file.getAbsolutePath());
+						sendFileNameToPythonAndGetCoordinates(file.getAbsolutePath());
+					}
+				}
 
-        // Add a mouse listener to the pdfPanel
-        pdfPanel.addMouseListener(new MouseAdapter() {
-            
-            @Override
-            public void mousePressed(MouseEvent e) {
-                docPreview.startPoint = e.getPoint(); // Access startPoint using the instance
-                 int x = e.getX();
-                int y = e.getY();
-                System.out.println("Mouse pressed at X: " + x + ", Y: " + y);
-                docPreview.endPoint = null;
-                pdfPanel.repaint(); // Repaint the panel to show the starting point
-            }
+			};
+			pdfPanel.addMouseListener(adapter);
+			pdfPanel.addMouseMotionListener(adapter);
+			// Add the pdfPanel to the frame
+			frame.add(prevButton, BorderLayout.WEST);
+			frame.add(nextButton, BorderLayout.EAST);
+			layered = new JLayeredPane();
+			layered.setBorder(BorderFactory.createTitledBorder("Move the Mouse to Move Duke"));
+			layered.setPreferredSize(new Dimension(pageWidth,pageHeight));
+			frame.add(layered, BorderLayout.CENTER);
+			pdfPanel.setSize(new Dimension(pageWidth,pageHeight));
+			layered.add(pdfPanel, JLayeredPane.DEFAULT_LAYER);
+			
+			rectPainter = new RectanglePainterPanel();
+			rectPainter.setBounds(0,0, pageWidth,pageHeight);
+			rectPainter.setVisible(true);
+			rectPainter.setOpaque(false);
+			layered.add(rectPainter, JLayeredPane.MODAL_LAYER);
 
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                docPreview.endPoint = e.getPoint(); // Access endPoint using the instance
-                int x = e.getX();
-                int y = e.getY();
-                System.out.println("Mouse released at X: " + x + ", Y: " + y);
-                if (docPreview.startPoint != null && docPreview.endPoint != null) {
-                    rectPainter.createRectangle(docPreview.startPoint, new Point(x,y));
-                    sendCoordinatesAndFileNameToPython(docPreview.startPoint, docPreview.endPoint, file.getAbsolutePath());
-                    sendFileNameToPythonAndGetCoordinates(file.getAbsolutePath());
-                }
-            }
-            
-        });
 
-            // Add the pdfPanel to the frame
-            frame.add(prevButton, BorderLayout.WEST);
-            frame.add(nextButton, BorderLayout.EAST);
+			renderAndDisplayPage(currentPage);
 
-            frame.add(pdfPanel, BorderLayout.CENTER);
-            rectPainter = new RectanglePainterPanel();
-            rectPainter.setBounds(0,0, 1,1);
-            rectPainter.setVisible(true);
-             rectPainter.setOpaque(false);
-            frame.add(rectPainter, BorderLayout.PAGE_END);
-            
+			frame.pack();
+			frame.setVisible(true);
 
-            renderAndDisplayPage(currentPage);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 
-            frame.pack();
-            frame.setVisible(true);
+	private static void renderAndDisplayPage(int pageNumber) {
+		try {
+			Image pageImage = pdfRenderer.renderImage(pageNumber, 1.0f);
+			pdfLabel.setIcon(new ImageIcon(pageImage));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	private static List<int[]> coordinatesList = new ArrayList<>();
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+	private static void sendCoordinatesAndFileNameToPython(Point startPoint, Point endPoint, String pdfFileName) {
+		try {
+			// Create an array to store the coordinates of the drawn rectangle
+			int[] coordinates = {
+					startPoint.y,
+					startPoint.x,
+					endPoint.y,
+					endPoint.x
+			};
 
-    private static void renderAndDisplayPage(int pageNumber) {
-        try {
-            Image pageImage = pdfRenderer.renderImage(pageNumber, 1.0f);
-            pdfLabel.setIcon(new ImageIcon(pageImage));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-private static List<int[]> coordinatesList = new ArrayList<>();
+			// Add the coordinates to the list
+			Gson gson = new Gson();
+			coordinatesList.add(coordinates);
+			String coordinatesJson = gson.toJson(coordinatesList);
+			// Construct a command to run the Python script with coordinates and the PDF file name as arguments
+			String[] cmd = {
+					"python",
+					"tab_extraction.py",
+					coordinatesJson.toString(),
+					pdfFileName
+			};
 
-private static void sendCoordinatesAndFileNameToPython(Point startPoint, Point endPoint, String pdfFileName) {
-    try {
-        // Create an array to store the coordinates of the drawn rectangle
-        int[] coordinates = {
-            startPoint.y,
-            startPoint.x,
-            endPoint.y,
-            endPoint.x
-        };
+			// Print the command
+			System.out.print("Command: ");
+			for (String arg : cmd) {
+				System.out.print(arg + " ");
+			}
+			System.out.println(); // Print a newline to separate it from other output
 
-        // Add the coordinates to the list
-        Gson gson = new Gson();
-        coordinatesList.add(coordinates);
-        String coordinatesJson = gson.toJson(coordinatesList);
-        // Construct a command to run the Python script with coordinates and the PDF file name as arguments
-        String[] cmd = {
-            "python",
-            "tab_extraction.py",
-            coordinatesJson.toString(),
-            pdfFileName
-        };
+			// Execute the Python script with the PDF file name as an argument
+			Process process = Runtime.getRuntime().exec(cmd);
 
-        // Print the command
-        System.out.print("Command: ");
-        for (String arg : cmd) {
-            System.out.print(arg + " ");
-        }
-        System.out.println(); // Print a newline to separate it from other output
+			// Handle process output or errors if needed
+			// ...
 
-        // Execute the Python script with the PDF file name as an argument
-        Process process = Runtime.getRuntime().exec(cmd);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	private static void sendFileNameToPythonAndGetCoordinates(String pdfFileName) {
+		try {
 
-        // Handle process output or errors if needed
-        // ...
+			String[] cmd = {
+					"python",
+					"tab_coordinates.py",
+					pdfFileName
+			};
 
-    } catch (IOException e) {
-        e.printStackTrace();
-    }
-}
-private static void sendFileNameToPythonAndGetCoordinates(String pdfFileName) {
-    try {
-   
-        String[] cmd = {
-            "python",
-            "tab_coordinates.py",
-            pdfFileName
-        };
+			// Print the command
+			System.out.print("Command: ");
+			for (String arg : cmd) {
+				System.out.print(arg + " ");
+			}
+			System.out.println(); // Print a newline to separate it from other output
 
-        // Print the command
-        System.out.print("Command: ");
-        for (String arg : cmd) {
-            System.out.print(arg + " ");
-        }
-        System.out.println(); // Print a newline to separate it from other output
+			// Execute the Python script with the PDF file name as an argument
+			Process process = Runtime.getRuntime().exec(cmd);
 
-        // Execute the Python script with the PDF file name as an argument
-        Process process = Runtime.getRuntime().exec(cmd);
-
-        // Handle process output or errors if needed
-        // ...
-        /*  BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+			// Handle process output or errors if needed
+			// ...
+			/*  BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             StringBuilder outputBuilder = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {
@@ -224,9 +227,9 @@ private static void sendFileNameToPythonAndGetCoordinates(String pdfFileName) {
         }*/
 
 
-    } catch (IOException e) {
-        e.printStackTrace();
-    }
-}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 
 }
