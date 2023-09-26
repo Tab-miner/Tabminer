@@ -1,7 +1,13 @@
 import java.awt.*;
 import java.awt.event.*;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import javax.swing.*;
 
@@ -25,7 +31,7 @@ public class DocPreview {
         frame = new JFrame("PDF Previewer");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        File file = new File("");
+        File file = new File("C:/Users/mufid/hobby/OCR/Discover-AccountActivity-20230726.pdf");
 
         try {
             _document = PDDocument.load(file);
@@ -94,6 +100,7 @@ public class DocPreview {
                 if (docPreview.startPoint != null && docPreview.endPoint != null) {
                     rectPainter.createRectangle(docPreview.startPoint, new Point(x,y));
                     sendCoordinatesAndFileNameToPython(docPreview.startPoint, docPreview.endPoint, file.getAbsolutePath());
+                    sendFileNameToPythonAndGetCoordinates(file.getAbsolutePath());
                 }
             }
             
@@ -129,27 +136,38 @@ public class DocPreview {
             e.printStackTrace();
         }
     }
+private static List<int[]> coordinatesList = new ArrayList<>();
+
 private static void sendCoordinatesAndFileNameToPython(Point startPoint, Point endPoint, String pdfFileName) {
     try {
+        // Create an array to store the coordinates of the drawn rectangle
+        int[] coordinates = {
+            startPoint.y,
+            startPoint.x,
+            endPoint.y,
+            endPoint.x
+        };
+
+        // Add the coordinates to the list
+        Gson gson = new Gson();
+        coordinatesList.add(coordinates);
+        String coordinatesJson = gson.toJson(coordinatesList);
         // Construct a command to run the Python script with coordinates and the PDF file name as arguments
         String[] cmd = {
             "python",
-            "tab_extraction.py", // Replace with your Python script filename
-            Integer.toString(startPoint.y),
-            Integer.toString(startPoint.x),
-            Integer.toString(endPoint.y),
-            Integer.toString(endPoint.x),
+            "tab_extraction.py",
+            coordinatesJson.toString(),
             pdfFileName
         };
-       // Print the command
+
+        // Print the command
         System.out.print("Command: ");
         for (String arg : cmd) {
-           System.out.print(arg + " ");
+            System.out.print(arg + " ");
         }
         System.out.println(); // Print a newline to separate it from other output
 
-
-        // Execute the Python script with coordinates and the PDF file name as arguments
+        // Execute the Python script with the PDF file name as an argument
         Process process = Runtime.getRuntime().exec(cmd);
 
         // Handle process output or errors if needed
@@ -159,4 +177,56 @@ private static void sendCoordinatesAndFileNameToPython(Point startPoint, Point e
         e.printStackTrace();
     }
 }
+private static void sendFileNameToPythonAndGetCoordinates(String pdfFileName) {
+    try {
+   
+        String[] cmd = {
+            "python",
+            "tab_coordinates.py",
+            pdfFileName
+        };
+
+        // Print the command
+        System.out.print("Command: ");
+        for (String arg : cmd) {
+            System.out.print(arg + " ");
+        }
+        System.out.println(); // Print a newline to separate it from other output
+
+        // Execute the Python script with the PDF file name as an argument
+        Process process = Runtime.getRuntime().exec(cmd);
+
+        // Handle process output or errors if needed
+        // ...
+        /*  BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            StringBuilder outputBuilder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                outputBuilder.append(line);
+            }
+
+            int exitCode = process.waitFor();
+            if (exitCode == 0) {
+                System.out.println("Script executed successfully.");
+
+                // Parse the JSON output using Gson
+                Gson gson = new Gson();
+                List<CoordinateData> coordinates = gson.fromJson(outputBuilder.toString(), new TypeToken<List<CoordinateData>>() {}.getType());
+
+                // Now you have the extracted coordinates in your Java application
+                for (CoordinateData coordinate : coordinates) {
+                    int pageNumber = coordinate.getPageNumber();
+                    double[] coords = coordinate.getCoordinates();
+
+                    System.out.printf("Page %d coordinates: y1=%.2f, x1=%.2f, y2=%.2f, x2=%.2f%n",
+                            pageNumber, coords[0], coords[1], coords[2], coords[3]);
+                }
+        }*/
+
+
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
+
 }

@@ -8,7 +8,7 @@ public class LoadDoc {
     public static void main(String args[]) throws IOException {
    
         //Loading an existing document 
-        File file = new File(""); 
+        File file = new File("C:/Users/mufid/hobby/OCR/Discover-AccountActivity-20230726.pdf"); 
         PDDocument document = PDDocument.load(file); 
           
         System.out.println("PDF loaded"); 
@@ -17,7 +17,7 @@ public class LoadDoc {
         document.addPage(new PDPage());  
   
         //Saving the document 
-        document.save("");
+        document.save("C:/Users/mufid/hobby/OCR/Discover-AccountActivity-20230726.pdf");
   
         //Closing the document  
         document.close(); 

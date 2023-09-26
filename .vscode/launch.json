@@ -6,6 +6,20 @@
     "configurations": [
         {
             "type": "java",
+            "name": "TesseractExample",
+            "request": "launch",
+            "mainClass": "TesseractExample",
+            "projectName": "Tabminer_812fa5b0"
+        },
+        {
+            "type": "java",
+            "name": "TableCoordinatesExtractor",
+            "request": "launch",
+            "mainClass": "TableCoordinatesExtractor",
+            "projectName": "Tabminer_812fa5b0"
+        },
+        {
+            "type": "java",
             "name": "UserRec",
             "request": "launch",
             "mainClass": "UserRec",

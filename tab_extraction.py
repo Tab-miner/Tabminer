@@ -3,6 +3,7 @@ import tabula
 import os
 import pandas as pd
 import sys
+import json
 
 def extract_pdf_to_csv(pdf_filename, csv_filename, area_parameters):
      try:
@@ -41,21 +42,15 @@ def extract_pdf_to_csv(pdf_filename, csv_filename, area_parameters):
 
 
 def main():
-    if len(sys.argv) != 6:
+    if len(sys.argv) != 3:
         print("Usage: python your_python_script.py start_x start_y end_x end_y pdf_filename")
         return
 
-    start_x = int(sys.argv[1])
-    start_y = int(sys.argv[2])
-    end_x = int(sys.argv[3])
-    end_y = int(sys.argv[4])
-    pdf_filename = sys.argv[5]
 
-    # Use the start_x, start_y, end_x, end_y values as needed in your script
-    # For example, you can define an area parameter based on these coordinates
-    area_parameters = [(start_x, start_y, end_x, end_y)]
-
-    # Use pdf_filename as the PDF file name in your script
+    coordinatesJson = sys.argv[1]
+    pdf_filename = sys.argv[2]
+    
+    area_parameters =  json.loads(coordinatesJson)
     csv_filename = "output.csv"
 
     extract_pdf_to_csv(pdf_filename, csv_filename, area_parameters)
