@@ -3,6 +3,7 @@ import pytesseract
 from PIL import Image
 import re
 import sys
+import json
 
 class PageCoordinates:
     def __init__(self, page_num):
@@ -87,7 +88,7 @@ def extract_coordinates_between_lines_from_pdf(pdf_path, line_pairs_list):
 
     return results
 
-def main(pdf_file_path):
+'''def main(pdf_file_path):
     page_coordinates = extract_coordinates_from_pdf(pdf_file_path)
 
     for page_coord in page_coordinates:
@@ -99,30 +100,44 @@ def main(pdf_file_path):
 
             if coordinates:
                 print(f"Page {page_number} coordinates: y1={coordinates[0][0]}, x1={coordinates[0][1]}, y2={coordinates[0][2]}, x2={coordinates[0][3]}")
+                print("OCR_PROCESS_COMPLETE")'''
+                
+def main(pdf_file_path):
+    page_coordinates = extract_coordinates_from_pdf(pdf_file_path)
+    coordinates_data = []  # Create an empty list to store the coordinates
 
-def main():
+    for page_coord in page_coordinates:
+        if page_coord.first_line_coordinates is not None and page_coord.last_line_coordinates is not None:
+            page_number = page_coord.page_num
+            first_line = page_coord.first_line_coordinates
+            last_line = page_coord.last_line_coordinates
+            coordinates = extract_coordinates_between_lines_from_pdf(pdf_file_path, [(first_line, last_line)])
+
+            if coordinates:
+                coordinates_data.append({
+                    'page_number': page_number,
+                    'coordinates': coordinates[0]  # Assuming you have only one set of coordinates per page
+                })
+
+    # Serialize the coordinates data to JSON
+    coordinates_json = json.dumps(coordinates_data)
+
+    # Print a signal to indicate that the OCR process is complete
+    print("OCR_PROCESS_COMPLETE")
+
+    # Print the coordinates JSON data
+    print(coordinates_json)
+
+
+if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Usage: python script.py <pdf_file_path>")
         sys.exit(1)
 
     pdf_file_path = sys.argv[1]
-    page_coordinates = extract_coordinates_from_pdf(pdf_file_path)
-
-    for page_coord in page_coordinates:
-        if page_coord.first_line_coordinates is not None and page_coord.last_line_coordinates is not None:
-            page_number = page_coord.page_num
-            first_line = page_coord.first_line_coordinates
-            last_line = page_coord.last_line_coordinates
-            coordinates = extract_coordinates_between_lines_from_pdf(pdf_file_path, [(first_line, last_line)])
-
-            if coordinates:
-                print(f"Page {page_number} coordinates: y1={coordinates[0][0]}, x1={coordinates[0][1]}, y2={coordinates[0][2]}, x2={coordinates[0][3]}")
-
-if __name__ == "__main__":
-    main()
-    
-'''  
-if __name__ == "__main__":
-    pdf_file_path = 'C:/Users/mufid/hobby/OCR/Discover-AccountActivity-20230726.pdf'
     main(pdf_file_path)
-'''
+    
+'''if __name__ == "__main__":
+    pdf_file_path = 'C:/Users/mufid/hobby/OCR/Discover-AccountActivity-20230726.pdf'
+    main(pdf_file_path)'''
+

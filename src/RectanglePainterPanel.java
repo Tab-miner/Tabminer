@@ -26,6 +26,15 @@ public class RectanglePainterPanel extends JPanel {
         }
     }
 
+    public int getPageCount() {
+        return _rectangles.size();
+    }
+
+    public void cleanRect(int page){
+        _rectangles.set(_currentPage, null);
+        repaint();
+    }
+
     public void setRectangle(int page, Point tl, Point br) {
         _rectangles.set(page, getRectangle(tl, br));
         _drawn.set(page, false);
