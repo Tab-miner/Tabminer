@@ -15,25 +15,25 @@ Meanwhile, the compiled output files will be generated in the `bin` folder by de
 
 
 ## Usage
-# Launch the Application and Open a PDF Document:
+### Launch the Application and Open a PDF Document:
 
 Run the Java application by executing the DocPreview class.
 The PDF documentation will be loaded from the 'pdf' folder in the project workplace.
 The app is in the development phase, the directory is handled within the source code and is not exposed through the user interface
 
-# Navigate Through Pages and Mark Areas of Interest:
+### Navigate Through Pages and Mark Areas of Interest:
 Use the left and right arrow buttons (← and →) to navigate through the pages of the PDF document.
 Click and drag your mouse to draw rectangles on the PDF pages to mark areas of interest.
 
-# Extract Data:
+### Extract Data:
 
 Click the "Extract" button to extract coordinates and data from the marked areas in all pages. The data and coordinates will be sent to a Python script for further processing.
 
-# Clear Marked Areas:
+### Clear Marked Areas:
 
 Click the "Clear" button to remove the marked rectangles from the current page.
 
-# View Extracted Data:
+### View Extracted Data:
 
 The extracted data will be saved to csv in the project workplace. Ensure that you have Python scripts (tab_extraction.py and tab_coordinates.py) in the same directory for data processing.
 
