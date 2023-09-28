@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import java.io.IOException;
 
 import javax.swing.*;
 
@@ -32,7 +33,8 @@ public class DocPreview {
 		frame = new JFrame("PDF Previewer");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-		File file = new File("Discover.pdf");
+		File file = new File("pdf\\BA-Stmt_2023-08-24.pdf");
+		//C:\\Users\\mufid\\hobby\\OCR\\Discover-AccountActivity-20230726.pdf");
 
 		try {
 			_document = PDDocument.load(file);
@@ -51,8 +53,8 @@ public class DocPreview {
 			frame.add(scrollPane);
 
 			// Create navigation buttons
-			JButton prevButton = new JButton("Previous");
-			JButton nextButton = new JButton("Next");
+			JButton prevButton = new JButton("\u2190");
+			JButton nextButton = new JButton("\u2192");
 
 			// Add action listeners to the navigation buttons
 			prevButton.addActionListener(new ActionListener() {
@@ -61,6 +63,7 @@ public class DocPreview {
 					if (currentPage > 0) {
 						currentPage--;
 						renderAndDisplayPage(currentPage);
+						rectPainter.setPage(currentPage);
 					}
 				}
 			});
@@ -71,6 +74,7 @@ public class DocPreview {
 					if (currentPage < _document.getNumberOfPages() - 1) {
 						currentPage++;
 						renderAndDisplayPage(currentPage);
+						rectPainter.setPage(currentPage);
 					}
 				}
 			});
@@ -82,31 +86,37 @@ public class DocPreview {
 			MouseAdapter adapter = new MouseAdapter() {
 				@Override
 				public void mousePressed(MouseEvent e) {
-					docPreview.startPoint = e.getPoint();
-					docPreview.endPoint = null;
+					rectPainter.MouseDown(e.getPoint());
 				}
 				@Override
 				public void mouseDragged(MouseEvent e) {
-					docPreview.endPoint = e.getPoint();
-					rectPainter.createRectangle(docPreview.startPoint, docPreview.endPoint);
+					rectPainter.drag(e.getPoint());
 			    }
 				@Override
 				public void mouseReleased(MouseEvent e) {
 					docPreview.endPoint = e.getPoint();
 					System.out.println("Mouse released at X: " + e.getX() + ", Y: " + e.getY());
-					rectPainter.createRectangle(docPreview.startPoint, docPreview.endPoint);
+					rectPainter.MouseUp(e.getPoint());
 					if (docPreview.startPoint != null && docPreview.endPoint != null) {
 						sendCoordinatesAndFileNameToPython(docPreview.startPoint, docPreview.endPoint, file.getAbsolutePath());
-						sendFileNameToPythonAndGetCoordinates(file.getAbsolutePath());
+						
 					}
 				}
 
 			};
+            JPanel buttonPanel = new JPanel();
+            buttonPanel.add(prevButton);
+            buttonPanel.add(nextButton);
+
+            // Create a panel for the entire bottom section, including the buttons
+            JPanel bottomPanel = new JPanel(new BorderLayout());
+            bottomPanel.add(buttonPanel, BorderLayout.NORTH);
+
+            frame.add(bottomPanel, BorderLayout.SOUTH);
 			pdfPanel.addMouseListener(adapter);
 			pdfPanel.addMouseMotionListener(adapter);
-			// Add the pdfPanel to the frame
-			frame.add(prevButton, BorderLayout.WEST);
-			frame.add(nextButton, BorderLayout.EAST);
+		
+
 			layered = new JLayeredPane();
 			layered.setBorder(BorderFactory.createTitledBorder("Move the Mouse to Move Duke"));
 			layered.setPreferredSize(new Dimension(pageWidth,pageHeight));
@@ -125,6 +135,7 @@ public class DocPreview {
 
 			frame.pack();
 			frame.setVisible(true);
+            sendFileNameToPythonAndGetCoordinates(file.getAbsolutePath());
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -143,7 +154,7 @@ public class DocPreview {
 
 	private static void sendCoordinatesAndFileNameToPython(Point startPoint, Point endPoint, String pdfFileName) {
 		try {
-			// Create an array to store the coordinates of the drawn rectangle
+			
 			int[] coordinates = {
 					startPoint.y,
 					startPoint.x,
@@ -151,11 +162,11 @@ public class DocPreview {
 					endPoint.x
 			};
 
-			// Add the coordinates to the list
+			
 			Gson gson = new Gson();
 			coordinatesList.add(coordinates);
 			String coordinatesJson = gson.toJson(coordinatesList);
-			// Construct a command to run the Python script with coordinates and the PDF file name as arguments
+			
 			String[] cmd = {
 					"python",
 					"tab_extraction.py",
@@ -163,18 +174,14 @@ public class DocPreview {
 					pdfFileName
 			};
 
-			// Print the command
+			
 			System.out.print("Command: ");
 			for (String arg : cmd) {
 				System.out.print(arg + " ");
 			}
-			System.out.println(); // Print a newline to separate it from other output
-
-			// Execute the Python script with the PDF file name as an argument
+			System.out.println(); 
+			
 			Process process = Runtime.getRuntime().exec(cmd);
-
-			// Handle process output or errors if needed
-			// ...
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -196,37 +203,27 @@ public class DocPreview {
 			}
 			System.out.println(); // Print a newline to separate it from other output
 
-			// Execute the Python script with the PDF file name as an argument
+			
 			Process process = Runtime.getRuntime().exec(cmd);
-
-			// Handle process output or errors if needed
-			// ...
-			/*  BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            StringBuilder outputBuilder = new StringBuilder();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
             while ((line = reader.readLine()) != null) {
-                outputBuilder.append(line);
-            }
-
-            int exitCode = process.waitFor();
-            if (exitCode == 0) {
-                System.out.println("Script executed successfully.");
-
-                // Parse the JSON output using Gson
-                Gson gson = new Gson();
-                List<CoordinateData> coordinates = gson.fromJson(outputBuilder.toString(), new TypeToken<List<CoordinateData>>() {}.getType());
-
-                // Now you have the extracted coordinates in your Java application
-                for (CoordinateData coordinate : coordinates) {
-                    int pageNumber = coordinate.getPageNumber();
-                    double[] coords = coordinate.getCoordinates();
-
-                    System.out.printf("Page %d coordinates: y1=%.2f, x1=%.2f, y2=%.2f, x2=%.2f%n",
-                            pageNumber, coords[0], coords[1], coords[2], coords[3]);
+                if ("OCR_PROCESS_COMPLETE".equals(line.trim())) {
+                    break;
                 }
-        }*/
+            }
+            StringBuilder coordinatesJsonBuilder = new StringBuilder();
+            while ((line = reader.readLine()) != null) {
+                coordinatesJsonBuilder.append(line);
+            }
+            String coordinatesJson = coordinatesJsonBuilder.toString();
+            System.out.println("Coordinates JSON data:");
+            System.out.println(coordinatesJson);
+            //SHould exit the code here !!!!!!!
+            System.out.println("Python process exited with code: ");
 
 
+			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
