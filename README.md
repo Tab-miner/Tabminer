@@ -63,6 +63,6 @@ tabula: extracting tables from PDF files.
 
 pandas: data manipulation.
 
-json: for encoding and decoding JSON. 
+json: encoding and decoding JSON. 
 
-pdfplumber: for working with PDF files. It provides functionality to extract text and tables from PDF documents
+pdfplumber: working with PDF files. It provides functionality to extract text and tables from PDF documents
