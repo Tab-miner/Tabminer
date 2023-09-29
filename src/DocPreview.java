@@ -1,16 +1,15 @@
 import java.awt.*;
 import java.awt.event.*;
 import java.io.BufferedReader;
+
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-import java.io.IOException;
 
 import javax.swing.*;
 
@@ -33,7 +32,7 @@ public class DocPreview {
 		frame = new JFrame("PDF Previewer");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-		File file = new File("pdf\\CO-Statement_092023_5417.pdf");
+		File file = new File("pdf/CO-Statement_092023_5417.pdf");
 		
 		try {
 			_document = PDDocument.load(file);
@@ -51,13 +50,12 @@ public class DocPreview {
 			scrollPane.setPreferredSize(new Dimension(pageWidth, pageHeight));
 			frame.add(scrollPane);
 
-			// Create navigation buttons
+			
 			JButton prevButton = new JButton("\u2190");
 			JButton nextButton = new JButton("\u2192");
 			JButton processButton = new JButton("Extract");
 			JButton clearButton = new JButton("clear");
 
-			// Add action listeners to the navigation buttons
 			prevButton.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
@@ -204,47 +202,74 @@ public class DocPreview {
 			e.printStackTrace();
 		}
 	}
+	public class CoordinatesData {
+		public int page_number;
+		public int[] line_coordinates;
+	}
 	private static void sendFileNameToPythonAndGetCoordinates(String pdfFileName) {
 		try {
 
 			String[] cmd = {
 					"python",
-					"tab_coordinates.py",
+					"coordinates_miner.py",
 					pdfFileName
 			};
 
-			// Print the command
 			System.out.print("Command: ");
 			for (String arg : cmd) {
 				System.out.print(arg + " ");
 			}
-			System.out.println(); // Print a newline to separate it from other output
-
+			System.out.println();
 			
 			Process process = Runtime.getRuntime().exec(cmd);
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            BufferedReader reader = process.inputReader();
             String line;
+        	StringBuilder coordinatesJsonBuilder = new StringBuilder();
+
             while ((line = reader.readLine()) != null) {
-                if ("OCR_PROCESS_COMPLETE".equals(line.trim())) {
+				System.out.println("read line " + line);
+                if ("PROCESS COMPLETE".equals(line.trim())) {
                     break;
                 }
+				coordinatesJsonBuilder.append(line);
             }
-            StringBuilder coordinatesJsonBuilder = new StringBuilder();
-            while ((line = reader.readLine()) != null) {
-                coordinatesJsonBuilder.append(line);
-            }
-            String coordinatesJson = coordinatesJsonBuilder.toString();
-            System.out.println("Coordinates JSON data:");
-            System.out.println(coordinatesJson);
-            
-            System.out.println("Python process exited with code: ");
+			boolean processComplete = false;
+			try{
+				processComplete = process.waitFor(3, TimeUnit.SECONDS);
+			}catch(InterruptedException e){
+				System.out.println("Interrupted");
+			}	
+			if (processComplete) {
+				String coordinatesJson = coordinatesJsonBuilder.toString();
+				System.out.println("Coordinates JSON data:");
+				System.out.println(coordinatesJson);
+				Gson gson = new Gson();
+				System.out.println(coordinatesJson);
+				CoordinatesData[] coordinatesDataArray = gson.fromJson(coordinatesJson, CoordinatesData[].class);
+				if(coordinatesDataArray == null) {
+					return;
+				}
+				for (CoordinatesData coordinatesData : coordinatesDataArray) {
+					int pageNumber = coordinatesData.page_number;
+						int x0 =  coordinatesData.line_coordinates[0];
+						int y0 =  coordinatesData.line_coordinates[1];
+						int x1 =  coordinatesData.line_coordinates[2];
+						int y1 =  coordinatesData.line_coordinates[3];
 
+						Point topLeft = new Point(x0, y0);
+						Point bottomRight = new Point(x1, y1);
 
-			
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
+						rectPainter.setRectangle(pageNumber-1, topLeft, bottomRight);
+				}
 
+				
+			System.out.println("Python process exited with code: " + process.exitValue());
+        } else {
+            System.out.println("Python process did not complete successfully.");
+        }
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
 }
