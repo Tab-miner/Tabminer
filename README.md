@@ -50,12 +50,19 @@ The extracted data will be saved to csv in the project workplace. Ensure that yo
 
 ## Dependency Management
 #### Java:
+
 Apache PDFBox: For rendering PDF documents.
+
 Google Gson: For JSON serialization and deserialization.
 
 #### Python (external libraries):
+
 csv: writing data to and from CSV files.
+
 tabula: extracting tables from PDF files.
+
 pandas: data manipulation.
+
 json: for encoding and decoding JSON. 
+
 pdfplumber: for working with PDF files. It provides functionality to extract text and tables from PDF documents
